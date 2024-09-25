@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from . import crud, models, schemas
@@ -16,8 +16,7 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
+        
 @app.post("/contacts/", response_model=schemas.ContactInDB)
 def create_contact(contact: schemas.ContactCreate, db: Session = Depends(get_db)):
     return crud.create_contact(db, contact)
@@ -61,13 +60,3 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
-
-@app.post("/token")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    access_token = create_access_token(data={"sub": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.email})
-    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
